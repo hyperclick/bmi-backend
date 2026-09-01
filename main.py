@@ -35,7 +35,7 @@ class BMIRequest(BaseModel):
 
 @app.get("/api/ver")
 async def version():
-    return {"version": 6}
+    return {"version": 7}
 
 
 @app.post("/api/calculate")
@@ -44,6 +44,7 @@ async def calculate_bmi(data: BMIRequest, request: FastAPIRequest):
     try:
 
         # Извлекаем строку параметров запуска из кастомного заголовка
+        print(f'headers: {request.headers}')
         vk_query = request.headers.get("X-VK-Sign")
         print(f'vk_query: {vk_query}')
         
