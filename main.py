@@ -1,22 +1,11 @@
 
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-import httpx
-import os 
 
-
-
-try:
-    APP_ID = int(os.environ["VK_APP_ID"])
-    VK_SERVICE_TOKEN = os.environ["VK_SERVICE_TOKEN"]
-except KeyError as e:
-    raise Exception(f"Missing required environment variable: {e}")
-except ValueError:
-    raise Exception("VK_APP_ID must be a valid integer")
-
+from vk_api import check_user_subscription, is_valid_vk_query
 
 # Изменяем пути для документации, чтобы Layero их не перехватывал
 app = FastAPI(
@@ -40,26 +29,40 @@ app.add_middleware(
 
 # Описываем структуру входящих данных с валидацией через Pydantic
 class BMIRequest(BaseModel):
-    user_id: int = Field(..., description="ID пользователя ВКонтакте")
     weight: float = Field(..., ge=20, le=300, description="Вес в кг от 20 до 300")
     height: float = Field(..., ge=100, le=250, description="Рост в см от 100 до 250")
 
 
 @app.get("/api/ver")
 async def version():
-    return {"version": 5}
+    return {"version": 6}
 
 
 @app.post("/api/calculate")
-async def calculate_bmi(data: BMIRequest):
-    try:
-        # Проверяем подписку в реальном времени через VK API
-        has_subscription = await check_user_subscription(data.user_id)
+async def calculate_bmi(data: BMIRequest, request: FastAPIRequest):
 
+    try:
+
+        # Извлекаем строку параметров запуска из кастомного заголовка
+        vk_query = request.headers.get("X-VK-Sign")
+        print(f'vk_query: {vk_query}')
+        
+        # Проверяем подпись
+        is_valid, user_id = is_valid_vk_query(vk_query)
+        
+        if not is_valid or not user_id:
+            raise HTTPException(
+                status_code=401, 
+                detail="Ошибка авторизации: поддельный запрос или истек срок сессии."
+            )
+
+        # Проверяем подписку по НАСТОЯЩЕМУ user_id, полученному из защищенной строки ВК
+        has_subscription = await check_user_subscription(user_id)
+        print(f'user_id: {user_id}, has_subscription: {has_subscription}')
         if not has_subscription:
             raise HTTPException(
-                status_code=403,
-                detail="Доступ запрещен. Оформите подписку в приложении.",
+                status_code=403, 
+                detail="Доступ запрещен. Оформите подписку."
             )
 
         # Логика расчета
@@ -81,38 +84,6 @@ async def calculate_bmi(data: BMIRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail="Ошибка при расчете данных")
 
-
-async def check_user_subscription(user_id: int) -> bool:
-    url = "https://vk.ru"
-
-    params = {
-        "access_token": VK_SERVICE_TOKEN,
-        "v": "5.131",  # Версия API ВК
-        "user_id": user_id,
-        "app_id": APP_ID,
-    }
-
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url, params=params)
-
-        if response.status_code != 200:
-            return False
-
-        result = response.json()
-
-        # Если ВК вернул ошибку (например, платежи не настроены)
-        if "error" in result:
-            print(f"Ошибка VK API: {result['error']['error_msg']}")
-            return False
-
-        subscription = result.get("response")
-
-        # Если подписка найдена и её статус "active" (активна)
-        if subscription and subscription.get("status") == "active":
-            print(f"subscription: {subscription}")
-            return True
-
-        return False
 
 
 # Для локального запуска (python main.py), на Лаеро сервер запустится сам через uvicorn
