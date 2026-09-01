@@ -33,9 +33,13 @@ class BMIRequest(BaseModel):
     height: float = Field(..., ge=100, le=250, description="Рост в см от 100 до 250")
 
 
+@app.get("/")
+async def index():
+    return version()
+
 @app.get("/api/ver")
 async def version():
-    return {"version": 7}
+    return {"version": 8}
 
 
 @app.post("/api/calculate")
