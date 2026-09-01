@@ -35,11 +35,11 @@ class BMIRequest(BaseModel):
 
 @app.get("/")
 async def index():
-    return version()
+    return await version()
 
 @app.get("/api/ver")
 async def version():
-    return {"version": 8}
+    return {"version": 9}
 
 
 @app.post("/api/calculate")
