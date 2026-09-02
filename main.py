@@ -4,6 +4,11 @@ from pydantic import BaseModel, Field
 
 from vk_api import check_user_subscription, is_valid_vk_query
 
+import os
+
+DATABASE_URL = os.environ.get("DATABASE_URL") 
+print(f"DATABASE_URL: {DATABASE_URL}")
+
 # Изменяем пути для документации, чтобы Layero их не перехватывал
 app = FastAPI(
     docs_url="/api/docs", redoc_url="/api/redoc", openapi_url="/api/openapi.json"
