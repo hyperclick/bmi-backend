@@ -1,9 +1,6 @@
-
-
 from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
 
 from vk_api import check_user_subscription, is_valid_vk_query
 
@@ -39,7 +36,7 @@ async def index():
 
 @app.get("/api/ver")
 async def version():
-    return {"version": 9}
+    return {"version": 10}
 
 
 @app.post("/api/calculate")
@@ -64,11 +61,11 @@ async def calculate_bmi(data: BMIRequest, request: FastAPIRequest):
         # Проверяем подписку по НАСТОЯЩЕМУ user_id, полученному из защищенной строки ВК
         has_subscription = await check_user_subscription(user_id)
         print(f'user_id: {user_id}, has_subscription: {has_subscription}')
-        if not has_subscription:
-            raise HTTPException(
-                status_code=403, 
-                detail="Доступ запрещен. Оформите подписку."
-            )
+        # if not has_subscription:
+        #     raise HTTPException(
+        #         status_code=403, 
+        #         detail="Доступ запрещен. Оформите подписку."
+        #     )
 
         # Логика расчета
         height_in_meters = data.height / 100

@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import hmac
 
@@ -5,16 +6,14 @@ import httpx
 import os
 from urllib.parse import parse_qsl, urlencode
 
-
 try:
-    VK_PROTECTED_KEY = os.environ["VK_PROTECTED_KEY"] 
+    VK_PROTECTED_KEY = os.environ["VK_PROTECTED_KEY"]
     APP_ID = int(os.environ["VK_APP_ID"])
     VK_SERVICE_TOKEN = os.environ["VK_SERVICE_TOKEN"]
 except KeyError as e:
     raise Exception(f"Missing required environment variable: {e}")
 except ValueError:
     raise Exception("VK_APP_ID must be a valid integer")
-
 
 
 async def check_user_subscription(user_id: int) -> bool:
@@ -61,40 +60,42 @@ def is_valid_vk_query(query_string: str) -> tuple[bool, int | None]:
     if not query_string:
         return False, None
 
-    # Декодируем строку параметров в список кортежей
+    # ВАЖНО: Если строка пришла с фронтенда через window.location.search,
+    # она начинается со знака '?'. Обязательно отрезаем его!
+    if query_string.startswith("?"):
+        query_string = query_string[1:]
+
+    # Парсим строку в словарь параметров
     try:
         query_params = dict(parse_qsl(query_string, keep_blank_values=True))
     except Exception:
         return False, None
 
-    # Ищем подпись, которую прислал ВК
+    # Ищем подпись, присланную ВКонтакте
     vk_sign = query_params.get("sign")
     if not vk_sign:
         return False, None
 
-    # Отбираем только параметры, начинающиеся на "vk_" и сортируем их по ключам
+    # 1. Отбираем только те параметры, которые начинаются на "vk_"
     vk_params = {k: v for k, v in query_params.items() if k.startswith("vk_")}
+
+    # 2. Сортируем параметры строго по алфавиту ключей
     sorted_params = sorted(vk_params.items())
 
-    print(f'params: {sorted_params}')
-    
-    # Формируем строку для проверки (пары ключ=значение через &)
+    # 3. Собираем отсортированные параметры обратно в строку (key1=value1&key2=value2)
     sign_str = urlencode(sorted_params)
 
-    # Считаем SHA256 HMAC подпись, используя наш Защищенный ключ приложения
+    # 4. Считаем HMAC-SHA256 подпись с использованием Защищенного ключа приложения
     hash_code = hmac.new(
-        VK_PROTECTED_KEY.encode("utf-8"),
-        sign_str.encode("utf-8"),
-        hashlib.sha256
+        VK_PROTECTED_KEY.encode("utf-8"), sign_str.encode("utf-8"), hashlib.sha256
     ).digest()
 
-    # Кодируем в URL-safe base64 и убираем лишнее (алгоритм ВК требует хэш в таком формате)
-    import base64
+    # 5. Кодируем в Base64 и приводим к URL-safe формату ВКонтакте
     calc_sign = base64.b64encode(hash_code).decode("utf-8")
     calc_sign = calc_sign.replace("+", "-").replace("/", "_").rstrip("=")
 
+    # Сравниваем полученную подпись с той, что передал ВК
     if calc_sign == vk_sign:
-        # Подпись верна! Возвращаем True и реальный ID пользователя из параметров
         return True, int(query_params.get("vk_user_id"))
-        
+
     return False, None
