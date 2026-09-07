@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Мой первый VK Mini App</title>
+    <link rel="stylesheet" href="vkui.css" />
+    <!-- Подключаем библиотеку VK Bridge через CDN -->
+    <!-- <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script> -->
+    <script src="browser.min.js"></script>
+
+    <style>
+      body {
+        text-align: center;
+        margin-top: 50px;
+        /* Фон и цвет текста будут сами меняться при переключении на темную тему */
+        background: var(--vkui--color_background_page);
+        color: var(--vkui--color_text_primary);
+        font-family: var(--vkui--font_family_base);
+      }
+
+      /* Простые стили для скрытия/показа страниц */
+      .page {
+        display: none;
+        padding: 20px;
+        font-family: sans-serif;
+      }
+      .active {
+        display: block;
+      }
+      nav a {
+        margin-right: 15px;
+        font-size: 18px;
+      }
+
+      /* Обертка для красивого выравнивания формы */
+      .form-container {
+        max-width: 320px;
+        margin: 30px auto;
+        padding: 0 20px;
+        text-align: left;
+      }
+
+      .form-item {
+        margin-bottom: 16px;
+      }
+
+      label {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 6px;
+        color: var(--vkui--color_text_secondary);
+      }
+
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px;
+        font-size: 16px;
+        border: 1px solid var(--vkui--color_field_border_alpha);
+        border-radius: 8px;
+        background: var(--vkui--color_background_text_alpha);
+        color: var(--vkui--color_text_primary);
+        outline: none;
+        transition: border-color 0.2s ease;
+      }
+
+      input:focus {
+        border-color: var(--vkui--color_stroke_accent);
+      }
+
+      /* Класс ошибки для поля ввода */
+      input.invalid {
+        border-color: var(--vkui--color_text_negative);
+        background: var(--vkui--color_background_negative_alpha);
+      }
+
+      /* Текст ошибки */
+      .error-message {
+        display: none;
+        font-size: 12px;
+        color: var(--vkui--color_text_negative);
+        margin-top: 4px;
+      }
+
+      /* Общие стили для кнопок в стиле VK */
+      button {
+        display: inline-block;
+        width: 100%;
+        padding: 12px 20px;
+        font-size: 16px;
+        font-weight: 500;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        background: var(--vkui--color_background_accent);
+        color: var(--vkui--color_text_contrast);
+        margin-bottom: 12px;
+        transition: opacity 0.2s ease;
+      }
+
+      button:active {
+        opacity: 0.85;
+      }
+
+      #btn {
+        max-width: 280px;
+      }
+
+      #result {
+        margin-top: 20px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>BMI build 2</h1>
+
+    
+    <div class="form-container">
+      <div class="form-item">
+        <label for="weight">Вес (кг):</label>
+        <input
+          type="number"
+          id="weight"
+          placeholder="Например: 70"
+          step="0.1"
+          value="70"
+        />
+        <div class="error-message" id="weight-error">
+          Введите корректный вес от 20 до 300 кг
+        </div>
+      </div>
+
+      <div class="form-item">
+        <label for="height">Рост (см):</label>
+        <input type="number" id="height" placeholder="Например: 175" value="175" />
+        <div class="error-message" id="height-error">
+          Введите корректный рост от 100 до 250 см
+        </div>
+      </div>
+
+      <button id="calc-bmi">Рассчитать ИМТ</button>
+
+      <div id="result"></div>
+
+      
+    </div>
+
+    <script>
+      
+      console.log('wls:', window.location.search);
+      
+
+      const API_URL = "https://bmi-backend-main.layero.app/api/";
+      // // 1. Обязательно инициализируем VK Bridge при старте
+      // vkBridge
+      //   .send("VKWebAppInit")
+      //   .then(() => console.log("VK Bridge успешно запущен"))
+      //   .catch((err) => console.error("Ошибка инициализации:", err));
+
+      // // Подписывается на события, отправленные нативным клиентом
+
+      // vkBridge.subscribe((e) => {
+      //   console.log(e);
+
+      //   if (e.detail && e.detail.type === "VKWebAppUpdateConfig") {
+      //     const config = e.detail.data;
+      //     if (config) {
+      //       // 1. Передаем общую тему (светлая/темная) для всей библиотеки
+      //       if (config.appearance) {
+      //         document.documentElement.setAttribute(
+      //           "data-theme",
+      //           config.appearance,
+      //         );
+      //       }
+      //       // 2. Передаем точную схему (например, vkcom_light) на body
+      //       if (config.scheme) {
+      //         document.body.setAttribute("scheme", config.scheme);
+      //       }
+      //     }
+      //   }
+      // });
+
+      
+      // --- ФУНКЦИИ ВАЛИДАЦИИ ---
+
+      function validateWeight() {
+        const weightInput = document.getElementById("weight");
+        const weightError = document.getElementById("weight-error");
+        const weight = parseFloat(weightInput.value);
+
+        // Если поле пустое, пока не красим в красный (чтобы не пугать при старте),
+        // но возвращаем false, так как рассчитывать ИМТ нельзя
+        if (weightInput.value.trim() === "") {
+          weightInput.classList.remove("invalid");
+          weightError.style.display = "none";
+          return false;
+        }
+
+        if (isNaN(weight) || weight < 20 || weight > 300) {
+          weightInput.classList.add("invalid");
+          weightError.style.display = "block";
+          return false;
+        } else {
+          weightInput.classList.remove("invalid");
+          weightError.style.display = "none";
+          return true;
+        }
+      }
+
+      function validateHeight() {
+        const heightInput = document.getElementById("height");
+        const heightError = document.getElementById("height-error");
+        const height = parseFloat(heightInput.value);
+
+        if (heightInput.value.trim() === "") {
+          heightInput.classList.remove("invalid");
+          heightError.style.display = "none";
+          return false;
+        }
+
+        if (isNaN(height) || height < 100 || height > 250) {
+          heightInput.classList.add("invalid");
+          heightError.style.display = "block";
+          return false;
+        } else {
+          heightInput.classList.remove("invalid");
+          heightError.style.display = "none";
+          return true;
+        }
+      }
+
+      // --- НАВЕШИВАЕМ СОБЫТИЯ НА ВВОД (Валидация на лету) ---
+      document
+        .getElementById("weight")
+        .addEventListener("input", validateWeight);
+      document
+        .getElementById("height")
+        .addEventListener("input", validateHeight);
+
+      // --- ОБРАБОТКА КЛИКА ПО КНОПКЕ ---
+      document.getElementById("calc-bmi").addEventListener("click", () => {
+        const weightInput = document.getElementById("weight");
+        const heightInput = document.getElementById("height");
+        const resultDiv = document.getElementById("result");
+
+        const isWeightValid = validateWeight();
+        const isHeightValid = validateHeight();
+
+        if (!isWeightValid || !isHeightValid) {
+          if (weightInput.value.trim() === "")
+            weightInput.classList.add("invalid");
+          if (heightInput.value.trim() === "")
+            heightInput.classList.add("invalid");
+
+          resultDiv.innerText = "";
+          vkBridge
+            .send("VKWebAppTapticNotificationOccurred", { type: "error" })
+            .catch((e) => {});
+          return;
+        }
+
+        // Если локальная валидация пройдена — отправляем на Питон
+        const weight = parseFloat(weightInput.value);
+        const height = parseFloat(heightInput.value);
+
+        resultDiv.innerText = "Считаем на сервере...";
+
+        fetch(API_URL + "calculate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-VK-Sign": window.location.search,
+          },
+          body: JSON.stringify({ weight: weight, height: height }),
+        })
+          .then((response) => {
+            if (!response.ok) throw new Error("Ошибка сервера");
+            return response.json();
+          })
+          .then((data) => {
+            // Выводим ответ от FastAPI
+            resultDiv.innerHTML = `Ваш ИМТ: ${data.bmi}<br><span style="font-size: 14px; font-weight: normal; color: var(--vkui--color_text_secondary);">${data.status}</span>`;
+            vkBridge
+              .send("VKWebAppTapticNotificationOccurred", { type: "success" })
+              .catch((e) => {});
+          })
+          .catch((error) => {
+            console.error(error);
+            resultDiv.innerHTML = `<span style="color: var(--vkui--color_text_negative);">Ошибка сервера</span>`;
+            vkBridge
+              .send("VKWebAppTapticNotificationOccurred", { type: "error" })
+              .catch((e) => {});
+          });
+      });
+
+      function tapticSuccess() {
+        vkBridge
+          .send("VKWebAppTapticNotificationOccurred", { type: "success" })
+          .catch((err) => console.log("Вибрация не поддерживается", err));
+      }
+
+      function tapticWarn() {
+        vkBridge
+          .send("VKWebAppTapticNotificationOccurred", { type: "warn" })
+          .catch((err) => console.log("Вибрация не поддерживается", err));
+      }
+
+      function tapticError() {
+        vkBridge
+          .send("VKWebAppTapticNotificationOccurred", { type: "error" })
+          .catch((err) => console.log("Вибрация не поддерживается", err));
+      }
+
+      function tapticSelectionChanged() {
+        vkBridge
+          .send("VKWebAppTapticSelectionChanged")
+          .catch((err) => console.log("Вибрация не поддерживается", err));
+      }
+    </script>
+  </body>
+</html>

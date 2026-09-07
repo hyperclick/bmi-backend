@@ -1,13 +1,25 @@
+import os
+
+from pathlib import Path
+from pydantic import VERSION, BaseModel, Field
+
+
 from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from vk_api import check_user_subscription, is_valid_vk_query
 
-import os
+
+VERSION = 11
+
+# Находим путь к папке, где лежит сам файл main.py
+BASE_DIR = Path(__file__).resolve().parent
 
 DATABASE_URL = os.environ.get("DATABASE_URL") 
-print(f"DATABASE_URL: {DATABASE_URL}")
+print(f"DATABASE_URL: {DATABASE_URL}, BASE_DIR: {BASE_DIR}")
 
 # Изменяем пути для документации, чтобы Layero их не перехватывал
 app = FastAPI(
@@ -35,13 +47,25 @@ class BMIRequest(BaseModel):
     height: float = Field(..., ge=100, le=250, description="Рост в см от 100 до 250")
 
 
-@app.get("/")
-async def index():
-    return await version()
+
+# 1. Монтируем папку со статикой (css, js библиотеки)
+# Передаем абсолютные пути, которые соберутся автоматически и на ПК, и на Layero
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+# 2. Указываем папку, где лежат наши Jinja2 шаблоны 
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+
+# 3. Главная ручка, которая собирает и возвращает готовую SPA-страницу
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: FastAPIRequest):
+    # Метод TemplateResponse автоматически возьмет base.html,
+    # выполнит в нем все инструкции {% include %} и вернет клиенту готовый HTML
+    return templates.TemplateResponse("base.html", {"request": request})
 
 @app.get("/api/ver")
 async def version():
-    return {"version": 10}
+    return {"version": VERSION}
 
 
 @app.post("/api/calculate")

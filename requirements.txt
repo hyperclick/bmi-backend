@@ -1,4 +1,6 @@
 fastapi
 httpx
-uvicorn
+jinja2
 pydantic
+uvicorn
+

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Мой первый VK Mini App</title>
+    <link rel="stylesheet" href="vkui.css" />
+    <!-- Подключаем библиотеку VK Bridge через CDN -->
+    <!-- <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script> -->
+    <script src="browser.min.js"></script>
+
+  </head>
+  <body>
+    <h1>spa with reload build 8</h1>
+
+    <!-- Меню навигации. Ссылки ведут на хэши -->
+    <nav>
+      <a href="#index">Главная</a>
+      <a href="#bmi">bmi</a>
+      <a href="#svt">svt</a>
+    </nav>
+
+    <!-- <button id="page1" onclick="window.location.href = 'page1.html'">
+      page1
+    </button> 
+    <a href="page1.html" class="button-style">page1</a>
+ 
+    <a href="page1.html">
+      <button>page1</button>
+    </a> -->
+
+    <script>
+      console.log("wls:", window.location.search);
+
+      // Функция, которая переключает видимость "страниц"
+      function router() {
+        // const routes = new Map();
+        const routes = {
+          "#index": "index.html",
+          "#bmi": "bmi.html",
+          "#svt": "svt.html",
+        };
+        // Получаем текущий хэш (например, "#about"), если его нет — по умолчанию "#index"
+        const hash = window.location.hash || "#index";
+        const route = routes[hash];
+        console.log({ hash, route, wlh: window.location.href });
+
+        redirect(route);
+        function redirect(route) {
+          if (isRoot() && route === routes['#index']) {
+            return;
+          }
+          if (window.location.href.includes(route)) {
+            return;
+          }
+          console.log(`redirect: ${window.location.href} => ${route}`);
+          window.location.href = route + window.location.search;
+        }
+        function isRoot(){
+          return !window.location.href.includes(".html")
+        }
+      }
+
+      // Следим за изменением хэша в адресной строке (когда юзер кликает по ссылкам)
+      window.addEventListener("hashchange", router);
+
+      // Запускаем роутер один раз при загрузке страницы, чтобы открылся правильный хэш
+      window.addEventListener("DOMContentLoaded", router);
+
+      
+      // 1. Обязательно инициализируем VK Bridge при старте
+      vkBridge
+        .send("VKWebAppInit")
+        .then(() => console.log("VK Bridge успешно запущен"))
+        .catch((err) => console.error("Ошибка инициализации:", err));
+
+      // Подписывается на события, отправленные нативным клиентом
+
+      vkBridge.subscribe((e) => {
+        console.log(e);
+
+        if (e.detail && e.detail.type === "VKWebAppUpdateConfig") {
+          const config = e.detail.data;
+          if (config) {
+            // 1. Передаем общую тему (светлая/темная) для всей библиотеки
+            if (config.appearance) {
+              document.documentElement.setAttribute(
+                "data-theme",
+                config.appearance,
+              );
+            }
+            // 2. Передаем точную схему (например, vkcom_light) на body
+            if (config.scheme) {
+              document.body.setAttribute("scheme", config.scheme);
+            }
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
