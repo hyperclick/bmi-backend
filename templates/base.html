@@ -32,40 +32,40 @@
     <script>
       console.log("wls:", window.location.search);
 
-      // Функция, которая переключает видимость "страниц"
-      function router() {
-        // const routes = new Map();
-        const routes = {
-          "#index": "index.html",
-          "#bmi": "bmi.html",
-          "#svt": "svt.html",
-        };
-        // Получаем текущий хэш (например, "#about"), если его нет — по умолчанию "#index"
-        const hash = window.location.hash || "#index";
-        const route = routes[hash];
-        console.log({ hash, route, wlh: window.location.href });
+      // // Функция, которая переключает видимость "страниц"
+      // function router() {
+      //   // const routes = new Map();
+      //   const routes = {
+      //     "#index": "index.html",
+      //     "#bmi": "bmi.html",
+      //     "#svt": "svt.html",
+      //   };
+      //   // Получаем текущий хэш (например, "#about"), если его нет — по умолчанию "#index"
+      //   const hash = window.location.hash || "#index";
+      //   const route = routes[hash];
+      //   console.log({ hash, route, wlh: window.location.href });
 
-        redirect(route);
-        function redirect(route) {
-          if (isRoot() && route === routes['#index']) {
-            return;
-          }
-          if (window.location.href.includes(route)) {
-            return;
-          }
-          console.log(`redirect: ${window.location.href} => ${route}`);
-          window.location.href = route + window.location.search;
-        }
-        function isRoot(){
-          return !window.location.href.includes(".html")
-        }
-      }
+      //   redirect(route);
+      //   function redirect(route) {
+      //     if (isRoot() && route === routes['#index']) {
+      //       return;
+      //     }
+      //     if (window.location.href.includes(route)) {
+      //       return;
+      //     }
+      //     console.log(`redirect: ${window.location.href} => ${route}`);
+      //     window.location.href = route + window.location.search;
+      //   }
+      //   function isRoot(){
+      //     return !window.location.href.includes(".html")
+      //   }
+      // }
 
-      // Следим за изменением хэша в адресной строке (когда юзер кликает по ссылкам)
-      window.addEventListener("hashchange", router);
+      // // Следим за изменением хэша в адресной строке (когда юзер кликает по ссылкам)
+      // window.addEventListener("hashchange", router);
 
-      // Запускаем роутер один раз при загрузке страницы, чтобы открылся правильный хэш
-      window.addEventListener("DOMContentLoaded", router);
+      // // Запускаем роутер один раз при загрузке страницы, чтобы открылся правильный хэш
+      // window.addEventListener("DOMContentLoaded", router);
 
       
       // 1. Обязательно инициализируем VK Bridge при старте
