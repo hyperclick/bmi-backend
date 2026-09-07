@@ -57,6 +57,7 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 # 3. Главная ручка, которая собирает и возвращает готовую SPA-страницу
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: FastAPIRequest):
+    print (request.base_url, request.path_params, request.query_params, request.url)
     # Метод TemplateResponse автоматически возьмет base.html,
     # выполнит в нем все инструкции {% include %} и вернет клиенту готовый HTML
     return templates.TemplateResponse(
