@@ -12,13 +12,12 @@ from fastapi.templating import Jinja2Templates
 
 from vk_api import check_user_subscription, is_valid_vk_query
 
-
 VERSION = 11
 
 # Находим путь к папке, где лежит сам файл main.py
 BASE_DIR = Path(__file__).resolve().parent
 
-DATABASE_URL = os.environ.get("DATABASE_URL") 
+DATABASE_URL = os.environ.get("DATABASE_URL")
 print(f"DATABASE_URL: {DATABASE_URL}, BASE_DIR: {BASE_DIR}")
 
 # Изменяем пути для документации, чтобы Layero их не перехватывал
@@ -47,12 +46,11 @@ class BMIRequest(BaseModel):
     height: float = Field(..., ge=100, le=250, description="Рост в см от 100 до 250")
 
 
-
 # 1. Монтируем папку со статикой (css, js библиотеки)
 # Передаем абсолютные пути, которые соберутся автоматически и на ПК, и на Layero
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
-# 2. Указываем папку, где лежат наши Jinja2 шаблоны 
+# 2. Указываем папку, где лежат наши Jinja2 шаблоны
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
@@ -61,7 +59,12 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 async def read_root(request: FastAPIRequest):
     # Метод TemplateResponse автоматически возьмет base.html,
     # выполнит в нем все инструкции {% include %} и вернет клиенту готовый HTML
-    return templates.TemplateResponse("base.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="base.html",
+        context={},  # Если нужно передать дополнительные переменные в HTML
+    )
+
 
 @app.get("/api/ver")
 async def version():
@@ -74,25 +77,25 @@ async def calculate_bmi(data: BMIRequest, request: FastAPIRequest):
     try:
 
         # Извлекаем строку параметров запуска из кастомного заголовка
-        print(f'headers: {request.headers}')
+        print(f"headers: {request.headers}")
         vk_query = request.headers.get("X-VK-Sign")
-        print(f'vk_query: {vk_query}')
-        
+        print(f"vk_query: {vk_query}")
+
         # Проверяем подпись
         is_valid, user_id = is_valid_vk_query(vk_query)
-        
+
         if not is_valid or not user_id:
             raise HTTPException(
-                status_code=401, 
-                detail="Ошибка авторизации: поддельный запрос или истек срок сессии."
+                status_code=401,
+                detail="Ошибка авторизации: поддельный запрос или истек срок сессии.",
             )
 
         # Проверяем подписку по НАСТОЯЩЕМУ user_id, полученному из защищенной строки ВК
         has_subscription = await check_user_subscription(user_id)
-        print(f'user_id: {user_id}, has_subscription: {has_subscription}')
+        print(f"user_id: {user_id}, has_subscription: {has_subscription}")
         # if not has_subscription:
         #     raise HTTPException(
-        #         status_code=403, 
+        #         status_code=403,
         #         detail="Доступ запрещен. Оформите подписку."
         #     )
 
@@ -114,7 +117,6 @@ async def calculate_bmi(data: BMIRequest, request: FastAPIRequest):
 
     except Exception as e:
         raise HTTPException(status_code=400, detail="Ошибка при расчете данных")
-
 
 
 # Для локального запуска (python main.py), на Лаеро сервер запустится сам через uvicorn
