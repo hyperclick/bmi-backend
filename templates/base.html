@@ -8,7 +8,6 @@
     <!-- Подключаем библиотеку VK Bridge через CDN -->
     <!-- <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script> -->
     <script src="static/browser.min.js"></script>
-
   </head>
   <body>
     <h1>spa with reload build 8</h1>
@@ -19,18 +18,19 @@
       <a href="#bmi">bmi</a>
       <a href="#svt">svt</a>
     </nav>
-
-    <!-- <button id="page1" onclick="window.location.href = 'page1.html'">
+    <a href="?bmi" class="button-style">bmi</a>
+<button id="bmi" onclick="window.location.href = '?bmi'">
       page1
     </button> 
-    <a href="page1.html" class="button-style">page1</a>
- 
+    <!-- 
+    
     <a href="page1.html">
       <button>page1</button>
     </a> -->
 
     <script>
       console.log("wls:", window.location.search);
+      console.log("wlh:", window.location.href);
 
       // // Функция, которая переключает видимость "страниц"
       // function router() {
@@ -47,9 +47,9 @@
 
       //   redirect(route);
       //   function redirect(route) {
-      //     if (isRoot() && route === routes['#index']) {
-      //       return;
-      //     }
+      //     // if (isRoot() && route === routes['#index']) {
+      //     //   return;
+      //     // }
       //     if (window.location.href.includes(route)) {
       //       return;
       //     }
@@ -67,7 +67,13 @@
       // // Запускаем роутер один раз при загрузке страницы, чтобы открылся правильный хэш
       // window.addEventListener("DOMContentLoaded", router);
 
-      
+      function navigateBmi() {
+        if (window.location.search) {
+          window.location.href += window.location.search + "&bmi";
+        } else {          
+          window.location.href += "?bmi";
+        }
+      }
       // 1. Обязательно инициализируем VK Bridge при старте
       vkBridge
         .send("VKWebAppInit")

@@ -57,7 +57,14 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 # 3. Главная ручка, которая собирает и возвращает готовую SPA-страницу
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: FastAPIRequest):
-    print (request.base_url, request.path_params, request.query_params, request.url)
+    print(request.base_url, request.path_params, request.query_params, request.url)
+    if "bmi" in request.query_params:
+        return templates.TemplateResponse(
+            request=request,
+            name="calculators/bmi.html",
+            context={},  # Если нужно передать дополнительные переменные в HTML
+        )
+
     # Метод TemplateResponse автоматически возьмет base.html,
     # выполнит в нем все инструкции {% include %} и вернет клиенту готовый HTML
     return templates.TemplateResponse(
